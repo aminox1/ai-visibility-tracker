@@ -3,6 +3,7 @@ import { Search, Loader2 } from 'lucide-react';
 import { api, type Analysis } from '../services/api';
 import SearchForm from './SearchForm';
 import AnalysisResults from './AnalysisResults';
+import HistoryView from './HistoryView';
 
 export default function Dashboard() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -60,7 +61,10 @@ export default function Dashboard() {
 
       {/* Results */}
       {analysis && !loading && (
-        <AnalysisResults analysis={analysis} />
+        <>
+          <AnalysisResults analysis={analysis} />
+          <HistoryView domain={analysis.domain} />
+        </>
       )}
 
       {/* Empty State */}

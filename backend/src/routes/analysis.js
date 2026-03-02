@@ -6,11 +6,14 @@ import {
   generateQueries,
   generateRecommendations,
 } from '../services/aiService.js';
+import {
+  saveAnalysis,
+  getDomainHistory,
+  getAllDomains,
+  getRecentAnalyses,
+} from '../services/storageService.js';
 
 const router = express.Router();
-
-// In-memory storage for tracking history (replace with MongoDB in production)
-const analysisHistory = new Map();
 
 /**
  * GET /api/analysis/status
@@ -97,11 +100,8 @@ router.post('/run', async (req, res) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Store in history
-    if (!analysisHistory.has(domain)) {
-      analysisHistory.set(domain, []);
-    }
-    analysisHistory.get(domain).push(analysis);
+    // Save to persistent storage
+    saveAnalysis(analysis);
 
     console.log(`✅ Analysis complete. Score: ${visibilityScore}%`);
 
@@ -123,7 +123,7 @@ router.post('/run', async (req, res) => {
  */
 router.get('/history/:domain', (req, res) => {
   const { domain } = req.params;
-  const history = analysisHistory.get(domain) || [];
+  const history = getDomainHistory(domain);
   res.json(history);
 });
 
@@ -132,12 +132,26 @@ router.get('/history/:domain', (req, res) => {
  * Get all tracked domains
  */
 router.get('/all', (req, res) => {
-  const allDomains = Array.from(analysisHistory.keys()).map(domain => ({
-    domain,
-    lastAnalysis: analysisHistory.get(domain).slice(-1)[0],
-    totalAnalyses: analysisHistory.get(domain).length,
-  }));
+  const domains = getAllDomains();
+  const allDomains = domains.map(domain => {
+    const history = getDomainHistory(domain);
+    return {
+      domain,
+      lastAnalysis: history[0],
+      totalAnalyses: history.length,
+    };
+  });
   res.json(allDomains);
+});
+
+/**
+ * GET /api/analysis/recent
+ * Get recent analyses
+ */
+router.get('/recent', (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const recent = getRecentAnalyses(limit);
+  res.json(recent);
 });
 
 /**
